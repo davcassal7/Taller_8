@@ -8,25 +8,56 @@ defaults: &defaults
     - image: cimg/python:3.10
   working_directory: ~/project
 
+prepare_venv: &prepare_venv
+  run:
+    name: Create venv
+    command: |
+      python -m venv venv
+      source venv/bin/activate
+      pip install --upgrade pip
+
 jobs:
   deploy_app_to_railway:
     <<: *defaults
+    timeout: 30m  
     steps:
-      - checkout
+      - checkout:
+          path: ~/project/
       - node/install:
           node-version: '20.9'
+
       - run:
           name: Check Node version
           command: node --version
+
       - run:
           name: Install Railway CLI
           command: npm install -g @railway/cli
+
       - run:
-          name: Deploy to Railway
+          name: Deploy to Railway App (with keep-alive)
           command: |
             cd bankchurn-api
-            railway up --service=incredible-vibrancy
-            railway up --detach
+
+            # Ejecutamos Railway en background
+            railway up --service=incredible-vibrancy --detach &
+            DEPLOY_PID=$!
+
+            # Bucle para evitar timeout por falta de output
+            while kill -0 $DEPLOY_PID 2>/dev/null; do
+              echo "⏳ Desplegando en Railway... (esperando que termine)"
+              sleep 60
+            done
+
+            # Esperar a que el proceso finalice y obtener su salida
+            wait $DEPLOY_PID
+
+tags_only: &tags_only
+  filters:
+    branches:
+      ignore: /.*/
+    tags:
+      only: /^.*/
 
 workflows:
   version: 2
@@ -36,5 +67,5 @@ workflows:
           filters:
             branches:
               only:
-                - master
                 - main
+                - master
