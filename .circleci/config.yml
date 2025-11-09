@@ -1,5 +1,4 @@
-version: 2.1
-
+version: '2.1'
 orbs:
   node: circleci/node@5.1.0
 
@@ -19,38 +18,20 @@ prepare_venv: &prepare_venv
 jobs:
   deploy_app_to_railway:
     <<: *defaults
-    timeout: 30m  
     steps:
       - checkout:
           path: ~/project/
       - node/install:
           node-version: '20.9'
-
+      - run: node --version 
+      - run: npm i -g @railway/cli
       - run:
-          name: Check Node version
-          command: node --version
-
-      - run:
-          name: Install Railway CLI
-          command: npm install -g @railway/cli
-
-      - run:
-          name: Deploy to Railway App (with keep-alive)
+          name: Deploy to Railway App
           command: |
             cd bankchurn-api
+            railway up --service=incredible-vibrancy
+            railway up --detach
 
-            # Ejecutamos Railway en background
-            railway up --service=incredible-vibrancy --detach &
-            DEPLOY_PID=$!
-
-            # Bucle para evitar timeout por falta de output
-            while kill -0 $DEPLOY_PID 2>/dev/null; do
-              echo "⏳ Desplegando en Railway... (esperando que termine)"
-              sleep 60
-            done
-
-            # Esperar a que el proceso finalice y obtener su salida
-            wait $DEPLOY_PID
 
 tags_only: &tags_only
   filters:
@@ -60,12 +41,12 @@ tags_only: &tags_only
       only: /^.*/
 
 workflows:
-  version: 2
+  version: 1
   deploy_pipeline:
     jobs:
       - deploy_app_to_railway:
           filters:
             branches:
               only:
-                - main
                 - master
+                - main
