@@ -29,7 +29,7 @@ jobs:
           name: Deploy to Railway App
           command: |
             cd bankchurn-api
-            railway up --service=incredible-vibrancy
+            railway up --service=incredible-vibr
             railway up --detach
 
 
@@ -49,3 +49,4 @@ workflows:
             branches:
               only:
                 - main
+
